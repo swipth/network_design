@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>基础架构部 · 信息安全架构设计</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body class="is-locked">
+  <div class="access-gate" id="accessGate" role="dialog" aria-labelledby="accessTitle" aria-modal="true">
+    <div class="access-gate-card">
+      <h2 id="accessTitle">基础架构信息安全</h2>
+      <p>请输入访问密码以查看内容</p>
+      <form id="accessForm" autocomplete="off">
+        <label for="accessPassword">访问密码</label>
+        <input id="accessPassword" name="password" type="password" inputmode="numeric" autocomplete="off" required autofocus>
+        <p class="access-error" id="accessError" role="alert"></p>
+        <button type="submit">进入</button>
+      </form>
+    </div>
+  </div>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">基础架构 <span>信息安全</span></div>
+      <nav aria-label="页面导航">
+        <ul>
+          <li><a href="#role">部门定位</a></li>
+          <li><a href="#gmp-base">GMP 底线</a></li>
+          <li><a href="#network">网络分区</a></li>
+          <li><a href="#access">通道管控</a></li>
+          <li><a href="#backup">备份恢复</a></li>
+          <li><a href="#ops">日常运维</a></li>
+          <li><a href="#flows">关键流程</a></li>
+          <li><a href="#boundary">与 QA 边界</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <div class="hero">
+    <div class="hero-inner">
+      <h1>基础架构部信息安全架构设计</h1>
+      <p class="lead">
+        承接信息化产品蓝图与数据权限矩阵，基础架构部的角色是：
+        为 <strong>GMP 数据完整性</strong>提供不可篡改的技术底座，并守住通用信息安全防线。
+        不定义业务规则（QA / 业务部门），但必须确保网络、主机、终端、账号能够支撑权限矩阵与审计追踪，
+        且<strong>底层设施自身不能成为数据完整性漏洞</strong>。
+      </p>
+      <div class="pill-row">
+        <span class="pill">IT/OT/实验室隔离</span>
+        <span class="pill">NTP 统一</span>
+        <span class="pill">堡垒机审计</span>
+        <span class="pill">特权剥离</span>
+        <span class="pill">备份可验证</span>
+      </div>
+    </div>
+  </div>
+
+  <main>
+    <section id="role">
+      <h2>部门定位与飞检风险</h2>
+      <p class="section-desc">飞检缺陷常出在「业务规则以外的绕过路径」：网络直通、时钟不一致、多源数据争议、IT 直改库等。</p>
+      <div class="principle-grid">
+        <article class="principle-card">
+          <h4>技术底座，非业务立法</h4>
+          <p>权限矩阵由 QA 与业务定义，基础架构负责在技术层「焊死」矩阵，使其无法被绕过。</p>
+        </article>
+        <article class="principle-card">
+          <h4>独立底层审计</h4>
+          <p>运维、网络、堡垒机、日志平台须留下与业务审计追踪可互证的独立痕迹。</p>
+        </article>
+        <article class="principle-card">
+          <h4>合规优先于运维便利</h4>
+          <p>禁止为排障方便打通办公网与生产库、双网卡跳板、管理员账号登录业务客户端。</p>
+        </article>
+        <article class="principle-card">
+          <h4>可验证的恢复能力</h4>
+          <p>备份不仅「有没有做」，还须定期演练恢复并校验数据完整性，保留签名记录。</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="gmp-base">
+      <h2>GMP 数据完整性：架构底线</h2>
+      <p class="section-desc">下列三项是架构层最容易被开具缺陷、且与 ALCOA+ 直接相关的控制基线。</p>
+
+      <div class="baseline-stack">
+        <article class="baseline-band band-network">
+          <h3>① 网络分区与隔离</h3>
+          <p>办公网（IT）与生产网（OT）、实验室网有效隔离；防火墙 + 入侵检测；防止办公终端直连 LIMS/MES 数据库。</p>
+          <ul>
+            <li>GMP 检查要点：办公与生产网络隔离（要求项，非建议）</li>
+            <li>禁止双网卡跳板、违规网闸旁路</li>
+          </ul>
+        </article>
+        <article class="baseline-band band-time">
+          <h3>② 时间同步强制统一</h3>
+          <p>部署受控 NTP，MES / LIMS / WMS / OA 等 GMP 相关系统时间源一致，满足 ALCOA+「同步性」。</p>
+          <ul>
+            <li>审计追踪时间戳矛盾将显著提高解释成本，可能被判定数据不可靠</li>
+          </ul>
+        </article>
+        <article class="baseline-band band-source">
+          <h3>③ 系统记录唯一性（权威源）</h3>
+          <p>配合 QA 维护「系统记录矩阵」：多系统出现同一数据时明确权威源，技术上实现引用而非失真复制。</p>
+          <ul>
+            <li>例：洁净区温湿度以 EMS 为原始记录，eBR 仅引用链接</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section id="network">
+      <h2>网络分区架构示意</h2>
+      <p class="section-desc">生产与办公之间仅允许经批准的应用访问路径；数据库层不对办公网开放直连。</p>
+      <div class="diagram-wrap">
+        <svg class="arch-canvas" viewBox="0 0 900 400" role="img" aria-label="IT OT 实验室网络分区">
+          <defs>
+            <linearGradient id="gIt" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style="stop-color:#60a5fa"/><stop offset="100%" style="stop-color:#3b82f6"/>
+            </linearGradient>
+            <linearGradient id="gOt" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style="stop-color:#2dd4bf"/><stop offset="100%" style="stop-color:#14b8a6"/>
+            </linearGradient>
+            <linearGradient id="gLab" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style="stop-color:#a78bfa"/><stop offset="100%" style="stop-color:#8b5cf6"/>
+            </linearGradient>
+            <linearGradient id="gBastion" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style="stop-color:#f472b6"/><stop offset="100%" style="stop-color:#ec4899"/>
+            </linearGradient>
+          </defs>
+
+          <rect x="40" y="40" width="260" height="300" rx="12" fill="#eff6ff" stroke="#93c5fd" stroke-width="2"/>
+          <text x="170" y="68" text-anchor="middle" fill="#2563eb" font-size="13" font-weight="600">办公网 IT</text>
+          <rect class="arch-node" x="70" y="90" width="200" height="40" rx="6" fill="url(#gIt)"/>
+          <text x="170" y="115" text-anchor="middle" fill="#fff" font-size="11">OA · HR · BIP · CRM</text>
+          <rect x="70" y="145" width="200" height="36" rx="6" fill="#dbeafe" stroke="#93c5fd"/>
+          <text x="170" y="167" text-anchor="middle" fill="#2a4070" font-size="10">办公终端 · 防病毒</text>
+          <text x="170" y="220" text-anchor="middle" fill="#5c6f9a" font-size="9">禁止直连 OT/Lab DB</text>
+
+          <rect x="320" y="120" width="120" height="160" rx="10" fill="url(#gBastion)"/>
+          <text x="380" y="148" text-anchor="middle" fill="#fff" font-size="11" font-weight="600">堡垒机</text>
+          <text x="380" y="168" text-anchor="middle" fill="#fff" font-size="9">运维录屏</text>
+          <text x="380" y="188" text-anchor="middle" fill="#fff" font-size="9">厂商远程</text>
+          <text x="380" y="220" text-anchor="middle" fill="#fff" font-size="9">特权入口</text>
+
+          <rect x="70" y="280" width="200" height="44" rx="8" fill="#e0f2fe" stroke="#38bdf8"/>
+          <text x="170" y="300" text-anchor="middle" fill="#0284c7" font-size="10" font-weight="600">受控 NTP</text>
+          <text x="170" y="315" text-anchor="middle" fill="#5c6f9a" font-size="9">全厂时间基准</text>
+
+          <rect x="460" y="150" width="80" height="100" rx="6" fill="#fef3c7" stroke="#fbbf24" stroke-width="2"/>
+          <text x="500" y="195" text-anchor="middle" fill="#b45309" font-size="10" font-weight="600">防火墙</text>
+          <text x="500" y="212" text-anchor="middle" fill="#92400e" font-size="8">+ IDS</text>
+
+          <rect x="560" y="40" width="300" height="140" rx="12" fill="#f0fdfa" stroke="#5eead4" stroke-width="2"/>
+          <text x="710" y="68" text-anchor="middle" fill="#0f766e" font-size="13" font-weight="600">生产网 OT</text>
+          <rect class="arch-node" x="590" y="85" width="240" height="40" rx="6" fill="url(#gOt)"/>
+          <text x="710" y="110" text-anchor="middle" fill="#fff" font-size="11">MES · WMS · EMS</text>
+          <text x="710" y="155" text-anchor="middle" fill="#5c6f9a" font-size="9">应用层访问，DB 不暴露至 IT</text>
+
+          <rect x="560" y="200" width="300" height="140" rx="12" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="2"/>
+          <text x="710" y="228" text-anchor="middle" fill="#6d28d9" font-size="13" font-weight="600">实验室网</text>
+          <rect class="arch-node" x="590" y="245" width="240" height="40" rx="6" fill="url(#gLab)"/>
+          <text x="710" y="270" text-anchor="middle" fill="#fff" font-size="11">LIMS · 色谱工作站</text>
+
+          <path class="arch-link ok" d="M270 110 L320 160"/>
+          <path class="arch-link ok" d="M440 180 L460 195"/>
+          <path class="arch-link ok" d="M540 195 L560 110"/>
+          <path class="arch-link ok" d="M540 210 L560 260"/>
+
+          <path class="arch-link blocked" d="M170 200 L560 120"/>
+          <text x="350" y="95" text-anchor="middle" fill="#be185d" font-size="10" font-weight="600">× 禁止办公直连生产库</text>
+
+          <path class="arch-link ok" d="M170 300 L590 130" opacity="0.5"/>
+          <path class="arch-link ok" d="M170 300 L590 270" opacity="0.5"/>
+          <text x="380" y="355" text-anchor="middle" fill="#5c6f9a" font-size="10">NTP 同步至 OT / Lab / 全部 GMP 业务系统</text>
+        </svg>
+      </div>
+
+      <article class="redline">
+        <h4>重大隐患（飞检高风险）</h4>
+        <ul>
+          <li>为运维便利打通办公网与生产网数据库端口</li>
+          <li>双网卡机器作为非受控跳板</li>
+          <li>供应商远程未经堡垒机、无录屏与审批</li>
+        </ul>
+      </article>
+    </section>
+
+    <section id="access">
+      <h2>账号与访问：只管通道，不碰业务内容</h2>
+      <p class="section-desc">落实数据权限矩阵的技术承载；IT 管理员不得成为业务数据的「隐形修改者」。</p>
+
+      <div class="control-grid">
+        <article class="control-card">
+          <h4>堡垒机与运维审计</h4>
+          <p>访问 GMP 相关服务器必经堡垒机，全程录屏；满足等保与内部审计，防范 IT 越权查看/改业务数据。</p>
+        </article>
+        <article class="control-card">
+          <h4>特权账号剥离</h4>
+          <p>域管、DB sa、虚拟化管理员与业务账号隔离；管理账号不得登录 LIMS/MES 客户端，业务账号不得获得 OS/DB 特权。</p>
+          <ul>
+            <li>直改数据库将绕过应用层审计追踪 — 架构层须技术封堵</li>
+          </ul>
+        </article>
+        <article class="control-card">
+          <h4>终端管控与数据不落地</h4>
+          <p>QC 实验室、车间等 GMP 终端：桌面云/终端管控，数据不落本地；USB 白名单；行为全量审计。</p>
+          <ul>
+            <li>防范 U 盘带走原始数据、本地改完再上传</li>
+          </ul>
+        </article>
+      </div>
+
+      <div class="diagram-wrap">
+        <svg class="arch-canvas" viewBox="0 0 880 200" role="img" aria-label="特权访问路径">
+          <defs>
+            <linearGradient id="gBastion2" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style="stop-color:#f472b6"/><stop offset="100%" style="stop-color:#ec4899"/>
+            </linearGradient>
+          </defs>
+          <rect x="40" y="60" width="160" height="80" rx="8" fill="#dbeafe" stroke="#93c5fd"/>
+          <text x="120" y="95" text-anchor="middle" fill="#2563eb" font-size="11" font-weight="600">业务账号</text>
+          <text x="120" y="115" text-anchor="middle" fill="#5c6f9a" font-size="9">LIMS/MES 客户端</text>
+
+          <rect x="360" y="40" width="160" height="120" rx="8" fill="url(#gBastion2)"/>
+          <text x="440" y="78" text-anchor="middle" fill="#fff" font-size="11" font-weight="600">堡垒机</text>
+          <text x="440" y="98" text-anchor="middle" fill="#fff" font-size="9">录屏 · 命令审计</text>
+
+          <rect x="680" y="60" width="160" height="80" rx="8" fill="#ccfbf1" stroke="#5eead4"/>
+          <text x="760" y="95" text-anchor="middle" fill="#0f766e" font-size="11" font-weight="600">运维特权</text>
+          <text x="760" y="115" text-anchor="middle" fill="#5c6f9a" font-size="9">OS/DB/虚拟化</text>
+
+          <path class="arch-link ok" d="M200 100 L360 100"/>
+          <path class="arch-link blocked" d="M120 140 L760 140"/>
+          <text x="440" y="175" text-anchor="middle" fill="#be185d" font-size="10">业务账号 × 禁止直达 DB/OS 特权层</text>
+          <text x="280" y="88" text-anchor="middle" fill="#0f766e" font-size="9">应用内权限矩阵</text>
+        </svg>
+      </div>
+    </section>
+
+    <section id="backup">
+      <h2>备份与灾难恢复：可验证性</h2>
+      <p class="section-desc">监管检查关注「能否恢复且数据未变」；河北省药监局检查要点：备份及恢复流程须经过验证。</p>
+      <div class="highlight-box">
+        <strong>架构要求：</strong>不能仅采购备份软件 — 须定期恢复演练，记录恢复时间、完整性校验、参与人签名；
+        LIMS / MES 等关键系统策略（全量/增量、保留期、异地）写入 SOP，基础架构操作本身可追溯。
+      </div>
+      <div class="deliverable">
+        <h4>验证性备份交付物</h4>
+        <ul>
+          <li>各关键系统备份与恢复 SOP（含 RPO/RTO 目标）</li>
+          <li>季度/年度恢复演练报告（数据哈希或业务抽样校验）</li>
+          <li>备份作业与恢复操作审计日志（与堡垒机/运维账号关联）</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="ops">
+      <h2>通用安全防线（资源约束下优先做实）</h2>
+      <p class="section-desc">与 GMP 变更控制、权限矩阵、审计追踪衔接的日常能力。</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>工作项</th>
+              <th>具体内容</th>
+              <th>与业务系统衔接</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>漏洞与补丁</strong></td>
+              <td>定期扫描服务器与网络设备；评估补丁对 GMP 系统影响</td>
+              <td>关键系统补丁前走变更控制；基础架构出风险评估，QA 批准备案</td>
+            </tr>
+            <tr>
+              <td><strong>防病毒</strong></td>
+              <td>服务器与终端统一防病毒；隔离区单独策略</td>
+              <td>避免误杀 LIMS/MES 进程导致采集中断</td>
+            </tr>
+            <tr>
+              <td><strong>日志集中</strong></td>
+              <td>网络、主机、安全设备日志集中留存（等保）</td>
+              <td>为审计追踪提供底层佐证（如时段内网络登录）</td>
+            </tr>
+            <tr>
+              <td><strong>供应商远程</strong></td>
+              <td>厂商远程须审批、堡垒机接入、全程录屏</td>
+              <td>防止排障时直接接触 GMP 数据</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="flows">
+      <h2>关键运维流程</h2>
+
+      <div class="flow-section">
+        <h3>GMP 系统补丁与变更</h3>
+        <p class="flow-caption">技术评估在前，QA 批准在后；生产窗口内执行并复核。</p>
+        <div class="flow-track">
+          <div class="flow-step"><div class="flow-step-inner"><h4>漏洞扫描</h4><p>基础架构</p></div></div>
+          <div class="flow-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></div>
+          <div class="flow-step"><div class="flow-step-inner"><h4>影响评估</h4><p>LIMS/MES 风险</p></div></div>
+          <div class="flow-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></div>
+          <div class="flow-step"><div class="flow-step-inner"><h4>QA 批准</h4><p>变更控制</p></div></div>
+          <div class="flow-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></div>
+          <div class="flow-step"><div class="flow-step-inner"><h4>实施验证</h4><p>功能/审计抽测</p></div></div>
+        </div>
+      </div>
+
+      <div class="flow-section">
+        <h3>供应商远程接入</h3>
+        <p class="flow-caption">默认禁止直连生产；特批有时效账号。</p>
+        <div class="flow-track">
+          <div class="flow-step"><div class="flow-step-inner"><h4>工单审批</h4><p>业务+QA</p></div></div>
+          <div class="flow-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></div>
+          <div class="flow-step"><div class="flow-step-inner"><h4>堡垒机</h4><p>录屏会话</p></div></div>
+          <div class="flow-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></div>
+          <div class="flow-step"><div class="flow-step-inner"><h4>最小权限</h4><p>无 DB 直访</p></div></div>
+          <div class="flow-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></div>
+          <div class="flow-step"><div class="flow-step-inner"><h4>会话归档</h4><p>日志留存</p></div></div>
+        </div>
+      </div>
+
+      <div class="flow-section">
+        <h3>备份恢复验证演练</h3>
+        <p class="flow-caption">「可恢复 + 数据未变」须书面证据。</p>
+        <div class="flow-track">
+          <div class="flow-step"><div class="flow-step-inner"><h4>按 SOP 备份</h4><p>全/增量</p></div></div>
+          <div class="flow-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></div>
+          <div class="flow-step"><div class="flow-step-inner"><h4>隔离环境恢复</h4><p>演练</p></div></div>
+          <div class="flow-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></div>
+          <div class="flow-step"><div class="flow-step-inner"><h4>完整性校验</h4><p>哈希/抽样</p></div></div>
+          <div class="flow-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></div>
+          <div class="flow-step"><div class="flow-step-inner"><h4>报告签名</h4><p>归档验证</p></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="boundary">
+      <h2>基础架构部与 QA 的边界</h2>
+      <p class="section-desc">一句话：QA 关心数据对不对、流程合不合规；基础架构关心数据能不能被偷偷改、网络会不会被绕过去。</p>
+
+      <div class="boundary-split">
+        <div class="boundary-card qa">
+          <h4>QA / 业务部门</h4>
+          <p>定义权限矩阵业务规则；批准变更与偏差；判定数据可靠性；维护计算机化系统验证文件中的业务部分。</p>
+        </div>
+        <div class="boundary-card infra">
+          <h4>基础架构部</h4>
+          <p>确保权限矩阵在技术层无法绕过；网络/时间/备份/堡垒机/日志可审计；不写业务权限规则，但为规则提供可信执行环境。</p>
+        </div>
+      </div>
+
+      <div class="highlight-box">
+        <strong>飞检就绪要点：</strong>权限矩阵无法通过双网卡、直连库、共享特权账号绕过；
+        所有底层运维与远程接入有<strong>独立于业务系统的审计痕迹</strong>，可与 LIMS/MES 审计追踪互证时间线（依赖 NTP 统一）。
+      </div>
+      <p class="print-hint">可使用浏览器打印为 PDF，作为基础架构安全设计说明或验证支撑材料引用。</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    传统医药上市公司 · 基础架构部信息安全架构（静态说明文档）
+  </footer>
+  <script src="assets/gate.js"></script>
+  <script src="assets/diagrams.js" defer></script>
+</body>
+</html>
